@@ -1,7 +1,7 @@
 {
-  "name": "siren",
+  "name": "slackson",
   "author": "Jim @ ThisPlace <jim@thisplace.com>",
-  "description": "Sonos music bot for Slack",
+  "description": "Sonos music controlling bot for Slack",
   "version": "0.1.0",
   "license": "MIT",
   "repository": {
