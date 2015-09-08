@@ -311,7 +311,7 @@ initStorage()
     ))
     .then(function () {
         console.log('Connected to Slack...');
-        setInterval(botLoop, 3000);
+        setInterval(botLoop, CONFIG.POLL_INTERVAL);
     });
 
 function onExit() {
