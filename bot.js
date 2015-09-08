@@ -3,10 +3,13 @@ var storage = require('node-persist');
 var q       = require('kew');
 var random = require('./random');
 var giphy  = require('./giphy');
+var lyrics = require('./lyrics');
 var Slack   = require('slack-node');
 
 var SLACK_TOKEN = process.env.SLACK_TOKEN;
 var slack       = new Slack(SLACK_TOKEN);
+
+var CHANNEL_TO_JOIN = process.env.CHANNEL_TO_JOIN;
 
 var CHANNEL;
 var USERS;
@@ -155,20 +158,6 @@ var TRIGGERS = [
         }
     },
     {
-        example : 'test',
-        regex   : /test/ig,
-        react   : function () {
-            var theTrackString = 'thingy';
-            var imageUrl       = 'http://www.gifdome.com/uploads/5/0/4/6/50461919/8609125_orig.gif';
-
-            return chatPostMessageAttachment('`' + theTrackString + '`', {
-                fallback  : theTrackString,
-                title     : theTrackString,
-                image_url : imageUrl
-            });
-        }
-    },
-    {
         example : 'next',
         regex   : /^next[!]*$/ig,
         react   : function (msg) {
@@ -239,6 +228,22 @@ var TRIGGERS = [
             var helpString = 'available commands: ' + TRIGGERS.map(function (t) { return t.example }).join(', ');
             return chatPostMessage(helpString);
         }
+    },
+    {
+        example : 'lyrics',
+        regex   : /lyrics/gi,
+        react   : function () {
+            var theTrackString;
+
+            return SONOS.currentTrack()
+                .then(function (track) {
+                    theTrackString = track.artist + ' - ' + track.title;
+                    return lyrics.getLyrics(track.artist, track.title);
+                })
+                .then(function (theLyrics) {
+                    return chatPostMessageAttachment('`' + theTrackString + '`\n```' + theLyrics.join('\n') + '```', {});
+                });
+        }
     }
 ];
 
@@ -291,9 +296,7 @@ function botLoop() {
         .then(reactToTriggers);
 }
 
-// Monitor messages in this channel
-var CHANNEL_TO_JOIN = 'sonosbitchin';
-
+// Bot entry-point
 initStorage()
     .then(getChannelIdByName.bind(null, CHANNEL_TO_JOIN))
     .then(function setChannel(channelId) {
@@ -317,5 +320,5 @@ function onExit() {
         .then(process.exit.bind(process));
 }
 
-// Ctrl + C event
+// Listen for Ctrl + C event
 process.on('SIGINT', onExit);

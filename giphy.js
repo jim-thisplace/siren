@@ -1,19 +1,4 @@
-var q        = require('kew');
-var _request = require('request');
-
-function request(url) {
-    var deferred = q.defer();
-
-    _request({ uri : url }, function (err, res, body) {
-        if (err) {
-            deferred.reject(err);
-        } else {
-            deferred.resolve(JSON.parse(body));
-        }
-    });
-
-    return deferred;
-}
+var request = require('./request-promise');
 
 function translate(search) {
     var searchString = search
@@ -24,7 +9,7 @@ function translate(search) {
 
     var url = 'http://api.giphy.com/v1/gifs/translate?s=' + searchString + '&api_key=dc6zaTOxFJmzC'; // public key for now
 
-    return request(url);
+    return request.json(url);
 }
 
 module.exports = {
