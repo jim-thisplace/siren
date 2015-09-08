@@ -143,7 +143,7 @@ var TRIGGERS = [
                         var imageUrl = giphyRes.data.images.original.url;
                         console.log(imageUrl);
 
-                        chatPostMessageAttachment('`' + theTrackString + '` ' + imageUrl, {
+                        chatPostMessageAttachment('`' + theTrackString + '`', {
                             fallback   : theTrackString,
                             title      : theTrackString,
                             image_url  : imageUrl
@@ -292,7 +292,7 @@ function botLoop() {
 }
 
 // Monitor messages in this channel
-var CHANNEL_TO_JOIN = 'bottestinggrounds';
+var CHANNEL_TO_JOIN = 'sonosbitchin';
 
 initStorage()
     .then(getChannelIdByName.bind(null, CHANNEL_TO_JOIN))
