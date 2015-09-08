@@ -6,10 +6,9 @@ var giphy  = require('./giphy');
 var lyrics = require('./lyrics');
 var Slack   = require('slack-node');
 
-var SLACK_TOKEN = process.env.SLACK_TOKEN;
-var slack       = new Slack(SLACK_TOKEN);
+var CONFIG = require('./config');
 
-var CHANNEL_TO_JOIN = process.env.CHANNEL_TO_JOIN;
+var slack = new Slack(CONFIG.SLACK_TOKEN);
 
 var CHANNEL;
 var USERS;
@@ -43,9 +42,9 @@ function requestSlackAPI(apiString, data) {
 
 function chatPostMessage(text) {
     var message = {
-        text : '```\n' + text + '\n```',
+        text     : '```\n' + text + '\n```',
         channel  : CHANNEL,
-        username : 'sonosbot'
+        username : CONFIG.BOT_NAME
     };
 
     return requestSlackAPI('chat.postMessage', message);
@@ -56,7 +55,7 @@ function chatPostMessageAttachment(text, attachment) {
         text        : text,
         attachments : JSON.stringify([attachment]),
         channel     : CHANNEL,
-        username    : 'sonosbot'
+        username : CONFIG.BOT_NAME
     };
 
     return requestSlackAPI('chat.postMessage', message);
@@ -147,9 +146,9 @@ var TRIGGERS = [
                         console.log(imageUrl);
 
                         chatPostMessageAttachment('`' + theTrackString + '`', {
-                            fallback   : theTrackString,
-                            title      : theTrackString,
-                            image_url  : imageUrl
+                            fallback  : theTrackString,
+                            title     : theTrackString,
+                            image_url : imageUrl
                         });
                     } else {
                         chatPostMessageAttachment('`' + theTrackString + '`\nGiphy couldn\'t translate this track into a GIF :(', {});
@@ -222,8 +221,8 @@ var TRIGGERS = [
         }
     },
     {
-        example : 'sonosbot help',
-        regex   : /sonosbot help/gi,
+        example : CONFIG.BOT_NAME + ' help',
+        regex   : /^help me$/gi,
         react   : function () {
             var helpString = 'available commands: ' + TRIGGERS.map(function (t) { return t.example }).join(', ');
             return chatPostMessage(helpString);
@@ -298,7 +297,7 @@ function botLoop() {
 
 // Bot entry-point
 initStorage()
-    .then(getChannelIdByName.bind(null, CHANNEL_TO_JOIN))
+    .then(getChannelIdByName.bind(null, CONFIG.CHANNEL_TO_JOIN))
     .then(function setChannel(channelId) {
         CHANNEL = channelId;
     })
@@ -308,7 +307,7 @@ initStorage()
     })
     .then(chatPostMessage.bind(
         null,
-        'sonosbot has entered the building'
+        CONFIG.BOT_NAME + ' has entered the building'
     ))
     .then(function () {
         console.log('Connected to Slack...');
@@ -316,7 +315,7 @@ initStorage()
     });
 
 function onExit() {
-    chatPostMessage('sonosbot has left the building')
+    chatPostMessage(CONFIG.BOT_NAME + ' has left the building')
         .then(process.exit.bind(process));
 }
 
