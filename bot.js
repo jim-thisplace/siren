@@ -1,10 +1,11 @@
-var SONOS  = require('./sonos');
-var storage = require('node-persist');
-var q       = require('kew');
-var random = require('./random');
-var giphy  = require('./giphy');
-var lyrics = require('./lyrics');
-var Slack   = require('slack-node');
+var SONOS            = require('./sonos');
+var storage          = require('node-persist');
+var q                = require('kew');
+var random           = require('./random');
+var giphy            = require('./giphy');
+var lyrics           = require('./lyrics');
+var Slack            = require('slack-node');
+var analyzeSentiment = require('Sentimental').analyze;
 
 var CONFIG = require('./config');
 
@@ -240,7 +241,70 @@ var TRIGGERS = [
                     return lyrics.getLyrics(track.artist, track.title);
                 })
                 .then(function (theLyrics) {
-                    return chatPostMessageAttachment('`' + theTrackString + '`\n```' + theLyrics.join('\n') + '```', {});
+
+                    if (theLyrics) {
+
+                        theLyrics     = theLyrics.join('\n');
+                        var sentiment = analyzeSentiment(theLyrics);
+
+                        var positiveScore = sentiment.positive.score;
+                        var negativeScore = sentiment.negative.score;
+
+                        var amplitude = Math.max(positiveScore, negativeScore);
+
+                        var botSentimentString = '\n`' + CONFIG.BOT_NAME + ' believes this is';
+
+                        if (3 > amplitude && amplitude >= 1) {
+                            botSentimentString += ' ' + random.fromArray([
+                                    'a slightly',
+                                    'a somewhat',
+                                    'a lightly',
+                                    'a marginally'
+                                ]);
+                        } else if (6 > amplitude && amplitude >= 3) {
+                            botSentimentString += ' ' + random.fromArray([
+                                    'a fairly',
+                                    'a rather',
+                                    'a reasonably',
+                                    'a pretty'
+                                ]);
+                        } else if (amplitude >= 6) {
+                            botSentimentString += ' ' + random.fromArray([
+                                    'an exceptionally',
+                                    'a highly',
+                                    'an abnormally',
+                                    'a particularly',
+                                    'an especially'
+                                ]);
+                        }
+
+                        if (positiveScore > negativeScore) {
+                            botSentimentString += ' ' + random.fromArray([
+                                    'positive',
+                                    'upbeat',
+                                    'joyful',
+                                    'cheery',
+                                    'happy'
+                                ]);
+                        } else {
+                            botSentimentString += ' ' + random.fromArray([
+                                    'negative',
+                                    'depressing',
+                                    'pale',
+                                    'sad',
+                                    'gloomy'
+                                ]);
+                        }
+
+                        botSentimentString += ' song.`';
+
+                        //botSentimentString += '\npositivity: ' + positiveScore + '\nnegativity: ' + negativeScore;
+
+                        return chatPostMessageAttachment('*' + theTrackString + '*\n```' + theLyrics + '```' + botSentimentString, {});
+                    } else {
+                        return chatPostMessage(CONFIG.BOT_NAME + ' couldn\'t find any lyrics for ' + theTrackString);
+                    }
+
                 });
         }
     }
@@ -295,6 +359,9 @@ function botLoop() {
         .then(reactToTriggers);
 }
 
+// Listen for Ctrl + C event
+process.on('SIGINT', onExit);
+
 // Bot entry-point
 initStorage()
     .then(getChannelIdByName.bind(null, CONFIG.CHANNEL_TO_JOIN))
@@ -318,6 +385,3 @@ function onExit() {
     chatPostMessage(CONFIG.BOT_NAME + ' has left the building')
         .then(process.exit.bind(process));
 }
-
-// Listen for Ctrl + C event
-process.on('SIGINT', onExit);
