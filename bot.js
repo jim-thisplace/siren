@@ -108,6 +108,10 @@ function initStorage() {
     return q.resolve(true);
 }
 
+function generateSynonymsRegex(list) {
+    return new RegExp('^(' + list.join('|') + ')$', 'gi');
+}
+
 /**
  * Dictionary of reactions: keys are the Regexes and the values are reaction functions.
  */
@@ -122,7 +126,10 @@ var TRIGGERS = [
     },
     {
         example : 'previous',
-        regex   : /^prev(ious)*$/gi,
+        regex : generateSynonymsRegex([
+            'prev',
+            'previous'
+        ]),
         react   : function (msg) {
             chatPostMessage(getUserNameById(msg.id) + ' requested to skip to the previous track.');
             return SONOS.playPreviousTrack();
@@ -130,7 +137,7 @@ var TRIGGERS = [
     },
     {
         example : 'whats playing',
-        regex   : /what(')*s playing.*/ig,
+        regex : /what(')*s playing|giphy.*/ig,
         react   : function () {
             var theTrackString;
 
@@ -159,7 +166,10 @@ var TRIGGERS = [
     },
     {
         example : 'next',
-        regex   : /^next[!]*$/ig,
+        regex : generateSynonymsRegex([
+            'next[!]*',
+            'skip[!]*'
+        ]),
         react   : function (msg) {
             chatPostMessage(getUserNameById(msg.id) + ' requested to skip to the next track.');
             return SONOS.playNextTrack();
@@ -223,7 +233,11 @@ var TRIGGERS = [
     },
     {
         example : CONFIG.BOT_NAME + ' help',
-        regex   : /^help me$/gi,
+        regex : generateSynonymsRegex([
+            CONFIG.BOT_NAME + ' help',
+            'help me',
+            'help'
+        ]),
         react   : function () {
             var helpString = 'available commands: ' + TRIGGERS.map(function (t) { return t.example }).join(', ');
             return chatPostMessage(helpString);
@@ -250,11 +264,14 @@ var TRIGGERS = [
                         var positiveScore = sentiment.positive.score;
                         var negativeScore = sentiment.negative.score;
 
-                        var amplitude = Math.max(positiveScore, negativeScore);
+                        var amplitude = Math.abs(positiveScore - negativeScore);
 
                         var botSentimentString = '\n`' + CONFIG.BOT_NAME + ' believes this is';
 
-                        if (3 > amplitude && amplitude >= 1) {
+                        if (1 > amplitude && amplitude >= 0) {
+                            botSentimentString += ' a';
+
+                        } else if (3 > amplitude && amplitude >= 1) {
                             botSentimentString += ' ' + random.fromArray([
                                     'a slightly',
                                     'a somewhat',
@@ -298,7 +315,9 @@ var TRIGGERS = [
 
                         botSentimentString += ' song.`';
 
-                        //botSentimentString += '\npositivity: ' + positiveScore + '\nnegativity: ' + negativeScore;
+                        botSentimentString += '\n```\n' +
+                            'Positivity score: ' + positiveScore + '\n' +
+                            'Negativity score: ' + negativeScore + '\n```';
 
                         return chatPostMessageAttachment('*' + theTrackString + '*\n```' + theLyrics + '```' + botSentimentString, {});
                     } else {
@@ -359,9 +378,6 @@ function botLoop() {
         .then(reactToTriggers);
 }
 
-// Listen for Ctrl + C event
-process.on('SIGINT', onExit);
-
 // Bot entry-point
 initStorage()
     .then(getChannelIdByName.bind(null, CONFIG.CHANNEL_TO_JOIN))
@@ -381,7 +397,11 @@ initStorage()
         setInterval(botLoop, CONFIG.POLL_INTERVAL);
     });
 
+
 function onExit() {
     chatPostMessage(CONFIG.BOT_NAME + ' has left the building')
         .then(process.exit.bind(process));
 }
+
+// Listen for Ctrl + C event
+process.on('SIGINT', onExit);
