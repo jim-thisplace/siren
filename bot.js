@@ -117,6 +117,13 @@ function generateSynonymsRegex(list) {
  */
 var TRIGGERS = [
     {
+        example : 'failsauce',
+        regex   : /^failsauce$/gi,
+        react   : function () {
+            return SONOS.playURL('http://' + NETWORKIP[0] + ':' + PORT + '/wahwahwah.mp3');
+        }
+    },
+    {
         example : 'ugh no',
         regex   : /^(ugh)*(\s)*(n)+(o)+(!)*$/gi,
         react   : function (msg) {
@@ -397,11 +404,40 @@ initStorage()
         setInterval(botLoop, CONFIG.POLL_INTERVAL);
     });
 
-
 function onExit() {
     chatPostMessage(CONFIG.BOT_NAME + ' has left the building')
-        .then(process.exit.bind(process));
+        .then(function () {
+            process.exit();
+        });
 }
 
 // Listen for Ctrl + C event
 process.on('SIGINT', onExit);
+
+// Serve up MP3 files so we can play them
+
+var express = require('express');
+var app     = express();
+var PORT    = 6667;
+
+app.use('/', express.static('mp3'));
+
+app.listen(PORT, function () {
+    console.log('Express server listening on port ' + PORT);
+});
+
+var os        = require('os');
+var NETWORKIP = [];
+(function () {
+    var interfaces = os.networkInterfaces();
+
+    for (var k in interfaces) {
+        for (var k2 in interfaces[k]) {
+            var address = interfaces[k][k2];
+            if (address.family === 'IPv4' && !address.internal) {
+                NETWORKIP.push(address.address);
+            }
+        }
+    }
+
+})();
