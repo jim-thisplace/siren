@@ -1,9 +1,11 @@
-var SONOS            = require('./sonos');
-var storage          = require('node-persist');
-var q                = require('kew');
-var random           = require('./random');
-var giphy            = require('./giphy');
-var lyrics           = require('./lyrics');
+var SONOS      = require('./sonos');
+var storage    = require('node-persist');
+var q          = require('kew');
+var random     = require('./random');
+var giphy      = require('./giphy');
+var lyrics     = require('./lyrics');
+var serveFiles = require('./serve-files');
+
 var Slack            = require('slack-node');
 var analyzeSentiment = require('Sentimental').analyze;
 
@@ -11,6 +13,7 @@ var CONFIG = require('./config');
 
 var slack = new Slack(CONFIG.SLACK_TOKEN);
 
+var NETWORK_IP;
 var CHANNEL;
 var USERS;
 
@@ -45,7 +48,8 @@ function chatPostMessage(text) {
     var message = {
         text     : '```\n' + text + '\n```',
         channel  : CHANNEL,
-        username : CONFIG.BOT_NAME
+        username : CONFIG.BOT_NAME,
+        icon_url : CONFIG.BOT_AVATAR_URL
     };
 
     return requestSlackAPI('chat.postMessage', message);
@@ -56,7 +60,8 @@ function chatPostMessageAttachment(text, attachment) {
         text        : text,
         attachments : JSON.stringify([attachment]),
         channel     : CHANNEL,
-        username : CONFIG.BOT_NAME
+        username : CONFIG.BOT_NAME,
+        icon_url : CONFIG.BOT_AVATAR_URL
     };
 
     return requestSlackAPI('chat.postMessage', message);
@@ -120,7 +125,7 @@ var TRIGGERS = [
         example : 'failsauce',
         regex   : /^failsauce$/gi,
         react   : function () {
-            return SONOS.playURL('http://' + NETWORKIP[0] + ':' + PORT + '/wahwahwah.mp3');
+            return SONOS.playURL('http://' + NETWORK_IP + ':' + PORT + '/wahwahwah.mp3');
         }
     },
     {
@@ -415,29 +420,6 @@ function onExit() {
 process.on('SIGINT', onExit);
 
 // Serve up MP3 files so we can play them
+serveFiles.startFileServer();
 
-var express = require('express');
-var app     = express();
-var PORT    = 6667;
-
-app.use('/', express.static('mp3'));
-
-app.listen(PORT, function () {
-    console.log('Express server listening on port ' + PORT);
-});
-
-var os        = require('os');
-var NETWORKIP = [];
-(function () {
-    var interfaces = os.networkInterfaces();
-
-    for (var k in interfaces) {
-        for (var k2 in interfaces[k]) {
-            var address = interfaces[k][k2];
-            if (address.family === 'IPv4' && !address.internal) {
-                NETWORKIP.push(address.address);
-            }
-        }
-    }
-
-})();
+NETWORK_IP = serveFiles.getNetworkIP();
