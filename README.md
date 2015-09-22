@@ -1,4 +1,7 @@
 # Slackson
+
+![slackson](slackson_360.png)
+
 Slack bot that controls and reacts to the state of Sonos controllers on your network.
 
 ```
